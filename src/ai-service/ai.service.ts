@@ -4,6 +4,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { GenerateSequenceDto } from './dto/generate-sequence.dto';
 import { PromptService } from '../prompt-service/prompt.service';
+import { DefaultSequenceFallback } from './fallbacks/default-sequence';
 import { PrismaService } from '../prisma/prisma.service';
 import { AiAdapterFactory } from './adapters/ai-adapter.factory';
 
@@ -87,6 +88,7 @@ export class AiService {
       }
     }
     this.logger.error('All AI retries failed, using fallback.');
+    return DefaultSequenceFallback;
   }
 
   private async generate(
