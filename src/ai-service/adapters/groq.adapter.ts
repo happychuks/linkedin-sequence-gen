@@ -13,13 +13,25 @@ import {
 
 @Injectable()
 export class GroqAdapter implements AiAdapter {
-  private groq: Groq;
+  private groq: Groq | null;
   private defaultModel: string;
   private defaultTemperature: number;
 
   constructor(private configService: ConfigService) {
+    const apiKey = this.configService.get<string>('GROQ_API_KEY');
+
+    if (!apiKey) {
+      console.warn(
+        'GROQ_API_KEY not found in environment variables - Groq adapter will be disabled',
+      );
+      this.groq = null;
+      this.defaultModel = 'llama-3.3-70b-versatile';
+      this.defaultTemperature = 0.7;
+      return;
+    }
+
     this.groq = new Groq({
-      apiKey: this.configService.get<string>('GROQ_API_KEY'),
+      apiKey: apiKey,
     });
 
     this.defaultModel = this.configService.get<string>(
@@ -32,6 +44,10 @@ export class GroqAdapter implements AiAdapter {
   }
 
   async chat(prompt: string, options?: AiChatOptions): Promise<AiChatResponse> {
+    if (!this.groq) {
+      throw new Error('Groq adapter is not available - API key not configured');
+    }
+
     const model = options?.model || this.defaultModel;
     const temperature = options?.temperature ?? this.defaultTemperature;
     const maxTokens =
