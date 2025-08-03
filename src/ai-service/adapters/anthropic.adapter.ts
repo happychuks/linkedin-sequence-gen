@@ -14,7 +14,7 @@ import {
 @Injectable()
 export class AnthropicAdapter implements AiAdapter {
   private readonly logger = new Logger(AnthropicAdapter.name);
-  private readonly anthropic: Anthropic;
+  private readonly anthropic: Anthropic | null;
   private defaultModel: string;
   private defaultTemperature: number;
 
@@ -22,8 +22,13 @@ export class AnthropicAdapter implements AiAdapter {
     const apiKey = this.configService.get<string>('ANTHROPIC_API_KEY');
 
     if (!apiKey) {
-      this.logger.warn('ANTHROPIC_API_KEY not found in environment variables');
-      throw new Error('ANTHROPIC_API_KEY is required for Anthropic adapter');
+      this.logger.warn(
+        'ANTHROPIC_API_KEY not found in environment variables - Anthropic adapter will be disabled',
+      );
+      this.anthropic = null;
+      this.defaultModel = 'claude-3-sonnet-20240229';
+      this.defaultTemperature = 0.7;
+      return;
     }
 
     this.anthropic = new Anthropic({
@@ -44,6 +49,12 @@ export class AnthropicAdapter implements AiAdapter {
   }
 
   async chat(prompt: string, options?: AiChatOptions): Promise<AiChatResponse> {
+    if (!this.anthropic) {
+      throw new Error(
+        'Anthropic adapter is not available - API key not configured',
+      );
+    }
+
     const model = options?.model || this.defaultModel;
     const temperature = options?.temperature ?? this.defaultTemperature;
     const maxTokens =
@@ -165,6 +176,13 @@ export class AnthropicAdapter implements AiAdapter {
   }
 
   async testConnection(): Promise<boolean> {
+    if (!this.anthropic) {
+      this.logger.warn(
+        'Anthropic API connection test skipped - API key not configured',
+      );
+      return false;
+    }
+
     try {
       this.logger.debug('Testing Anthropic API connection...');
 
