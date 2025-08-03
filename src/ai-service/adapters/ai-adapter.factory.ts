@@ -2,6 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { AiAdapter } from './ai-adapter.interface';
 import { OpenAiAdapter } from './openai.adapter';
+import { AnthropicAdapter } from './anthropic.adapter';
 import { GroqAdapter } from './groq.adapter';
 
 export type SupportedAiProvider = 'openai' | 'anthropic' | 'groq';
@@ -14,6 +15,7 @@ export class AiAdapterFactory {
   constructor(
     private configService: ConfigService,
     private openAiAdapter: OpenAiAdapter,
+    private anthropicAdapter: AnthropicAdapter,
     private groqAdapter: GroqAdapter,
   ) {
     const provider = this.getProviderFromConfig();
@@ -79,10 +81,12 @@ export class AiAdapterFactory {
 
   private createAdapter(provider: SupportedAiProvider): AiAdapter {
     switch (provider) {
-      case 'openai':
-        return this.openAiAdapter;
       case 'groq':
         return this.groqAdapter;
+      case 'openai':
+        return this.openAiAdapter;
+      case 'anthropic':
+        return this.anthropicAdapter;
       default: {
         // This should never happen due to TypeScript typing, but just in case
         const errorMsg = `Unsupported AI provider: ${String(provider)}`;
