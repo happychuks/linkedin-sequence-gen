@@ -93,4 +93,18 @@ export class SequenceService {
       },
     };
   }
+
+  async history(prospectId: number) {
+    const seqs = await this.sequenceRepository.findManyByProspectId(prospectId);
+    return seqs.map((s) => ({
+      sequence: s.messages,
+      thinking_process: s.thinkingProcess,
+      prospect_analysis: s.prospectAnalysis,
+      metadata: {
+        ...(typeof s.metadata === 'object' && s.metadata ? s.metadata : {}),
+        generated_at: s.createdAt,
+        prompt_version: s.prompt.version,
+      },
+    }));
+  }
 }
