@@ -70,9 +70,11 @@ export class GenerateSequenceDto {
   @ApiProperty({
     description: 'Number of messages in the sequence',
     minimum: 1,
-    maximum: 10,
+    maximum: 4,
     example: 3,
   })
   @IsNumber()
+  @Min(1)
+  @Max(4)
   sequence_length: number;
 }

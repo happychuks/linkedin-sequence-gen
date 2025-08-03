@@ -456,7 +456,7 @@ export const generateSequenceDto = z.object({
     directness: z.number().min(0).max(1),
   }),
   company_context: z.string().min(10),
-  sequence_length: z.number().int().min(1).max(10),
+  sequence_length: z.number().int().min(1).max(4),
 });
 ```
 
