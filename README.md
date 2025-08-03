@@ -837,8 +837,44 @@ npx prisma db push        # Push schema changes
 
 ### API Usage Examples
 
+#### **Live Demo & Testing**
+
+The application is deployed on Railway and can be tested live using Swagger UI:
+
+🚀 **Live API Documentation:** [https://linkedin-sequence-gen-production.up.railway.app/api/docs](https://linkedin-sequence-gen-production.up.railway.app/api/docs)
+
+**Interactive Testing:**
+
+1. Visit the Swagger UI link above
+2. Click on any endpoint to expand it
+3. Click "Try it out" to test with sample data
+4. Execute requests and see real-time responses
+
+#### **cURL Examples**
+
 ```bash
-# Generate sequence
+# Generate sequence (Live endpoint)
+curl -X POST https://linkedin-sequence-gen-production.up.railway.app/api/generate-sequence \
+  -H "Content-Type: application/json" \
+  -d '{
+    "prospect_url": "https://linkedin.com/in/happy-felix",
+    "tov_config": {
+      "formality": 0.9,
+      "warmth": 0.8,
+      "directness": 0.7
+    },
+    "company_context": "We help B2B companies automate sales and generate leads",
+    "sequence_length": 3
+  }'
+
+# Get history (Live endpoint)
+curl https://linkedin-sequence-gen-production.up.railway.app/api/history/1
+```
+
+#### **Local Development Examples**
+
+```bash
+# Generate sequence (Local)
 curl -X POST http://localhost:3000/api/generate-sequence \
   -H "Content-Type: application/json" \
   -d '{
@@ -852,7 +888,7 @@ curl -X POST http://localhost:3000/api/generate-sequence \
     "sequence_length": 3
   }'
 
-# Get history
+# Get history (Local)
 curl http://localhost:3000/api/history/1
 ```
 
