@@ -1,0 +1,44 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+  //output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Prospect {
+  id        Int        @id @default(autoincrement())
+  url       String     @unique
+  sequences Sequence[]
+}
+
+model Prompt {
+  id        Int        @id @default(autoincrement())
+  version   Int
+  content   String
+  createdAt DateTime   @default(now())
+  sequences Sequence[]
+}
+
+model Sequence {
+  id               Int      @id @default(autoincrement())
+  prospectId       Int
+  promptId         Int
+  messages         Json
+  thinkingProcess  Json
+  prospectAnalysis String?
+  metadata         Json
+  createdAt        DateTime @default(now())
+
+  prospect Prospect @relation(fields: [prospectId], references: [id])
+  prompt   Prompt   @relation(fields: [promptId], references: [id])
+
+}
