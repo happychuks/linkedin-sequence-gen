@@ -41,4 +41,10 @@ model Sequence {
   prospect Prospect @relation(fields: [prospectId], references: [id])
   prompt   Prompt   @relation(fields: [promptId], references: [id])
 
+  // Indexes for performance optimization
+  @@index([prospectId])
+  @@index([promptId])
+  @@index([createdAt])
+  @@index([prospectId, createdAt(sort: Desc)])
+  @@index([promptId, createdAt(sort: Desc)])
 }
