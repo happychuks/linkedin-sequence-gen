@@ -17,7 +17,7 @@ async function bootstrap() {
   });
 
   const config = new DocumentBuilder()
-    .setTitle('LinkedIn Messaging AI')
+    .setTitle('LinkedIn Sequence Generator AI')
     .setDescription('AI-personalized outreach generator')
     .setVersion('1.0')
     .build();
