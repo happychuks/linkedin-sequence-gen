@@ -106,10 +106,19 @@ After successful deployment:
    # Test sequence generation
    curl -X POST "https://your-app-url.com/api/generate-sequence" \
      -H "Content-Type: application/json" \
-     -d '{"prospectUrl": "https://linkedin.com/in/example"}'
+     -d '{
+       "prospect_url": "https://linkedin.com/in/happy-felix",
+       "tov_config": {
+         "formality": 0.9,
+         "warmth": 0.8,
+         "directness": 0.7
+       },
+       "company_context": "We help B2B companies automate sales and generate leads",
+       "sequence_length": 3
+     }'
    
    # Test history
-   curl "https://your-app-url.com/api/sequence/history/1"
+   curl "https://your-app-url.com/api/history/1"
    ```
 
 3. **Monitor Logs**

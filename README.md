@@ -451,8 +451,9 @@ export class SequenceController {
 export const generateSequenceDto = z.object({
   prospect_url: z.string().url(),
   tov_config: z.object({
-    tone: z.string(),
-    style: z.string(),
+    formality: z.number().min(0).max(1),
+    warmth: z.number().min(0).max(1),
+    directness: z.number().min(0).max(1),
   }),
   company_context: z.string().min(10),
   sequence_length: z.number().int().min(1).max(10),
@@ -838,12 +839,16 @@ npx prisma db push        # Push schema changes
 
 ```bash
 # Generate sequence
-curl -X POST http://localhost:3000/api/generate-sequence 
-  -H "Content-Type: application/json" 
+curl -X POST http://localhost:3000/api/generate-sequence \
+  -H "Content-Type: application/json" \
   -d '{
-    "prospect_url": "https://linkedin.com/in/john-doe",
-    "tov_config": {"tone": "professional", "style": "personalized"},
-    "company_context": "AI startup focused on automation",
+    "prospect_url": "https://linkedin.com/in/happy-felix",
+    "tov_config": {
+      "formality": 0.9,
+      "warmth": 0.8,
+      "directness": 0.7
+    },
+    "company_context": "We help B2B companies automate sales and generate leads",
     "sequence_length": 3
   }'
 
