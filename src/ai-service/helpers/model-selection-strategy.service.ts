@@ -65,9 +65,9 @@ export class ModelSelectionStrategyService {
     availableModels: string[],
     defaultModel: string,
   ): string {
-    if (complexity === 'complex' || sequenceLength > 5) {
+    if (complexity === 'complex' || sequenceLength === 4) {
       return availableModels.includes('gpt-4') ? 'gpt-4' : defaultModel;
-    } else if (complexity === 'medium' || sequenceLength > 3) {
+    } else if (complexity === 'medium' || sequenceLength === 3) {
       return availableModels.includes('gpt-3.5-turbo')
         ? 'gpt-3.5-turbo'
         : defaultModel;
@@ -82,11 +82,11 @@ export class ModelSelectionStrategyService {
     availableModels: string[],
     defaultModel: string,
   ): string {
-    if (complexity === 'complex' || sequenceLength > 5) {
+    if (complexity === 'complex' || sequenceLength === 4) {
       return availableModels.includes('claude-3-opus-20240229')
         ? 'claude-3-opus-20240229'
         : defaultModel;
-    } else if (complexity === 'medium' || sequenceLength > 3) {
+    } else if (complexity === 'medium' || sequenceLength === 3) {
       return availableModels.includes('claude-3-sonnet-20240229')
         ? 'claude-3-sonnet-20240229'
         : defaultModel;
@@ -103,13 +103,13 @@ export class ModelSelectionStrategyService {
     availableModels: string[],
     defaultModel: string,
   ): string {
-    if (complexity === 'complex' || sequenceLength > 5) {
+    if (complexity === 'complex' || sequenceLength === 4) {
       return availableModels.includes('deepseek-r1-distill-llama-70b')
         ? 'deepseek-r1-distill-llama-70b'
         : availableModels.includes('llama-3.3-70b-versatile')
           ? 'llama-3.3-70b-versatile'
           : defaultModel;
-    } else if (complexity === 'medium' || sequenceLength > 3) {
+    } else if (complexity === 'medium' || sequenceLength === 3) {
       return availableModels.includes('llama-3.3-70b-versatile')
         ? 'llama-3.3-70b-versatile'
         : availableModels.includes('llama-3.3-70b-specdec')
