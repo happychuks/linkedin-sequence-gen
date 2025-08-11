@@ -19,7 +19,7 @@ export class TovConfigService {
   constructor(private readonly prisma: PrismaService) {}
 
   async create(data: CreateTovConfigData) {
-    return this.prisma.tovConfig.create({
+    return await this.prisma.tovConfig.create({
       data,
     });
   }
@@ -45,7 +45,7 @@ export class TovConfigService {
     }
 
     // Create new configuration if not found
-    return this.create({
+    return await this.create({
       formality,
       warmth,
       directness,
@@ -55,33 +55,33 @@ export class TovConfigService {
   }
 
   async findById(id: number) {
-    return this.prisma.tovConfig.findUnique({
+    return await this.prisma.tovConfig.findUnique({
       where: { id },
     });
   }
 
   async findPresets() {
-    return this.prisma.tovConfig.findMany({
+    return await this.prisma.tovConfig.findMany({
       where: { isPreset: true },
       orderBy: { name: 'asc' },
     });
   }
 
   async findAll() {
-    return this.prisma.tovConfig.findMany({
+    return await this.prisma.tovConfig.findMany({
       orderBy: [{ isPreset: 'desc' }, { name: 'asc' }],
     });
   }
 
   async updateById(id: number, data: Partial<CreateTovConfigData>) {
-    return this.prisma.tovConfig.update({
+    return await this.prisma.tovConfig.update({
       where: { id },
       data,
     });
   }
 
   async deleteById(id: number) {
-    return this.prisma.tovConfig.delete({
+    return await this.prisma.tovConfig.delete({
       where: { id },
     });
   }
