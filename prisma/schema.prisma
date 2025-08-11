@@ -28,20 +28,35 @@ model Prompt {
   sequences Sequence[]
 }
 
+model TovConfig {
+  id          Int      @id @default(autoincrement())
+  name        String? // Optional name for presets like "Professional", "Casual"
+  formality   Float // 0.0 to 1.0
+  warmth      Float // 0.0 to 1.0
+  directness  Float // 0.0 to 1.0
+  description String? // Optional description of the TOV style
+  isPreset    Boolean  @default(false) // Whether this is a system preset
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  sequences Sequence[]
+
+  // Ensure unique combinations for presets
+  @@unique([formality, warmth, directness, name])
+  @@index([isPreset])
+  @@index([name])
+}
+
 model Sequence {
   id               Int      @id @default(autoincrement())
   prospectId       Int
   promptId         Int
+  tovConfigId      Int // Reference to TOV configuration
   messages         Json     @db.JsonB // JSONB for message querying
   thinkingProcess  Json // Keep as JSON (write-once, read-rarely)
   prospectAnalysis String?
   metadata         Json     @db.JsonB // JSONB for analytics queries
   createdAt        DateTime @default(now())
-
-  // TOV Configuration for refinement capability
-  tovFormality  Float @default(0.5) // 0.0 to 1.0
-  tovWarmth     Float @default(0.5) // 0.0 to 1.0
-  tovDirectness Float @default(0.5) // 0.0 to 1.0
 
   // Sequence versioning for iterations
   version          Int  @default(1)
@@ -53,12 +68,14 @@ model Sequence {
 
   prospect       Prospect   @relation(fields: [prospectId], references: [id])
   prompt         Prompt     @relation(fields: [promptId], references: [id])
+  tovConfig      TovConfig  @relation(fields: [tovConfigId], references: [id])
   parentSequence Sequence?  @relation("SequenceRefinements", fields: [parentSequenceId], references: [id])
   refinements    Sequence[] @relation("SequenceRefinements")
 
   // Indexes for performance optimization
   @@index([prospectId])
   @@index([promptId])
+  @@index([tovConfigId])
   @@index([createdAt])
   @@index([prospectId, createdAt(sort: Desc)])
   @@index([promptId, createdAt(sort: Desc)])
