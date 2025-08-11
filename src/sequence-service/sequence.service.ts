@@ -4,6 +4,7 @@
 
 import { Injectable } from '@nestjs/common';
 import { GenerateSequenceDto } from '../ai-service/dto/generate-sequence.dto';
+import { RefineSequenceDto } from '../ai-service/dto/refine-sequence.dto';
 import { AiService } from '../ai-service/ai.service';
 import { PromptService } from '../prompt-service/prompt.service';
 import { SequenceRepository } from './sequence.repository';
@@ -19,6 +20,8 @@ export class SequenceService {
   ) {}
 
   async generate(dto: GenerateSequenceDto) {
+    const startTime = Date.now();
+
     const prospect = await this.prospectRepository.upsert(dto.prospect_url);
 
     const activePrompt = await this.promptService.getActivePrompt();
@@ -66,14 +69,22 @@ export class SequenceService {
       this.ai.extractNameFromLinkedInUrl(dto.prospect_url),
     );
 
-    await this.sequenceRepository.create({
+    const createdSequence = await this.sequenceRepository.create({
       prospectId: prospect.id,
       promptId: promptRecord.id,
       messages: result.sequence,
       thinkingProcess: result.thinking_process,
       prospectAnalysis: result.prospect_analysis,
       metadata: result.metadata,
+      tovFormality: dto.tov_config.formality,
+      tovWarmth: dto.tov_config.warmth,
+      tovDirectness: dto.tov_config.directness,
+      companyContext: dto.company_context,
+      sequenceLength: dto.sequence_length,
     });
+
+    const endTime = Date.now();
+    const totalGenerationTime = endTime - startTime;
 
     return {
       sequence: result.sequence.map((m: any) => ({
@@ -88,8 +99,10 @@ export class SequenceService {
         ...(typeof result.metadata === 'object' && result.metadata
           ? result.metadata
           : {}),
+        sequence_id: createdSequence.id,
         prospect_id: prospect.id,
         prompt_version: promptRecord.version,
+        generation_time_ms: totalGenerationTime,
       },
     };
   }
@@ -102,9 +115,22 @@ export class SequenceService {
       prospect_analysis: s.prospectAnalysis,
       metadata: {
         ...(typeof s.metadata === 'object' && s.metadata ? s.metadata : {}),
+        sequence_id: s.id,
         generated_at: s.createdAt,
         prompt_version: s.prompt.version,
       },
     }));
+  }
+
+  async refine(dto: RefineSequenceDto): Promise<any> {
+    return this.ai.refineSequence(dto);
+  }
+
+  async getRefinements(sequenceId: number): Promise<any> {
+    return this.ai.getSequenceRefinements(sequenceId);
+  }
+
+  async compareVersions(sequenceIds: number[]): Promise<any> {
+    return this.ai.compareSequenceVersions(sequenceIds);
   }
 }
