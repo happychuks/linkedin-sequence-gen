@@ -1,14 +1,15 @@
 /*
-  Warnings:
+Warnings:
 
-  - You are about to drop the column `tovDirectness` on the `Sequence` table. All the data in the column will be lost.
-  - You are about to drop the column `tovFormality` on the `Sequence` table. All the data in the column will be lost.
-  - You are about to drop the column `tovWarmth` on the `Sequence` table. All the data in the column will be lost.
-  - Added the required column `tovConfigId` to the `Sequence` table without a default value. This is not possible if the table is not empty.
+- You are about to drop the column `tovDirectness` on the `Sequence` table. All the data in the column will be lost.
+- You are about to drop the column `tovFormality` on the `Sequence` table. All the data in the column will be lost.
+- You are about to drop the column `tovWarmth` on the `Sequence` table. All the data in the column will be lost.
+- Added the required column `tovConfigId` to the `Sequence` table without a default value. This is not possible if the table is not empty.
 
 */
 
 -- Step 1: Create the TovConfig table
+
 CREATE TABLE "public"."TovConfig" (
     "id" SERIAL NOT NULL,
     "name" TEXT,
@@ -25,7 +26,9 @@ CREATE TABLE "public"."TovConfig" (
 
 -- Step 2: Create indexes for TovConfig
 CREATE INDEX "TovConfig_isPreset_idx" ON "public"."TovConfig"("isPreset");
+
 CREATE INDEX "TovConfig_name_idx" ON "public"."TovConfig"("name");
+
 CREATE UNIQUE INDEX "TovConfig_formality_warmth_directness_name_key" ON "public"."TovConfig"("formality", "warmth", "directness", "name");
 
 -- Step 3: Insert default TOV configuration and existing unique combinations
@@ -67,7 +70,9 @@ DROP COLUMN "tovWarmth";
 
 -- Step 8: Create remaining indexes
 CREATE INDEX "Sequence_tovConfigId_idx" ON "public"."Sequence"("tovConfigId");
+
 CREATE INDEX "Sequence_metadata_idx" ON "public"."Sequence" USING GIN ("metadata");
+
 CREATE INDEX "Sequence_messages_idx" ON "public"."Sequence" USING GIN ("messages");
 
 -- Step 9: Add foreign key constraint
