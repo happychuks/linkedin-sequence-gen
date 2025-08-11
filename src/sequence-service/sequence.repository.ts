@@ -6,13 +6,11 @@ import { Sequence } from '@prisma/client';
 export interface CreateSequenceData {
   prospectId: number;
   promptId: number;
+  tovConfigId: number;
   messages: any;
   thinkingProcess: any;
   prospectAnalysis?: string;
   metadata: any;
-  tovFormality?: number;
-  tovWarmth?: number;
-  tovDirectness?: number;
   companyContext?: string;
   sequenceLength?: number;
   version?: number;
@@ -22,6 +20,15 @@ export interface CreateSequenceData {
 export interface SequenceWithProspect extends Sequence {
   prospect: {
     url: string;
+  };
+  tovConfig: {
+    id: number;
+    name: string | null;
+    formality: number;
+    warmth: number;
+    directness: number;
+    description: string | null;
+    isPreset: boolean;
   };
 }
 
@@ -53,14 +60,20 @@ export class SequenceRepository {
   async findByIdWithProspect(id: number): Promise<SequenceWithProspect | null> {
     return this.prisma.sequence.findUnique({
       where: { id },
-      include: { prospect: true },
+      include: {
+        prospect: true,
+        tovConfig: true,
+      },
     });
   }
 
   async findManyByIds(ids: number[]): Promise<SequenceWithProspect[]> {
     return this.prisma.sequence.findMany({
       where: { id: { in: ids } },
-      include: { prospect: { select: { url: true } } },
+      include: {
+        prospect: { select: { url: true } },
+        tovConfig: true,
+      },
       orderBy: { version: 'asc' },
     });
   }
@@ -73,20 +86,29 @@ export class SequenceRepository {
         id: true,
         prospectId: true,
         promptId: true,
+        tovConfigId: true,
         messages: true,
         thinkingProcess: true,
         prospectAnalysis: true,
         metadata: true,
         createdAt: true,
-        tovFormality: true,
-        tovWarmth: true,
-        tovDirectness: true,
         version: true,
         parentSequenceId: true,
         companyContext: true,
         sequenceLength: true,
         prospect: {
           select: { url: true },
+        },
+        tovConfig: {
+          select: {
+            id: true,
+            name: true,
+            formality: true,
+            warmth: true,
+            directness: true,
+            description: true,
+            isPreset: true,
+          },
         },
       },
     });

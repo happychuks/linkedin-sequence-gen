@@ -9,6 +9,7 @@ import { AiService } from '../ai-service/ai.service';
 import { PromptService } from '../prompt-service/prompt.service';
 import { SequenceRepository } from './sequence.repository';
 import { ProspectRepository } from './prospect.repository';
+import { TovConfigService } from './tov-config.service';
 
 @Injectable()
 export class SequenceService {
@@ -17,6 +18,7 @@ export class SequenceService {
     private readonly prospectRepository: ProspectRepository,
     private readonly ai: AiService,
     private readonly promptService: PromptService,
+    private readonly tovConfigService: TovConfigService,
   ) {}
 
   async generate(dto: GenerateSequenceDto) {
@@ -69,16 +71,21 @@ export class SequenceService {
       this.ai.extractNameFromLinkedInUrl(dto.prospect_url),
     );
 
+    // Find or create TOV configuration
+    const tovConfig = await this.tovConfigService.findOrCreate(
+      dto.tov_config.formality,
+      dto.tov_config.warmth,
+      dto.tov_config.directness,
+    );
+
     const createdSequence = await this.sequenceRepository.create({
       prospectId: prospect.id,
       promptId: promptRecord.id,
+      tovConfigId: tovConfig.id,
       messages: result.sequence,
       thinkingProcess: result.thinking_process,
       prospectAnalysis: result.prospect_analysis,
       metadata: result.metadata,
-      tovFormality: dto.tov_config.formality,
-      tovWarmth: dto.tov_config.warmth,
-      tovDirectness: dto.tov_config.directness,
       companyContext: dto.company_context,
       sequenceLength: dto.sequence_length,
     });

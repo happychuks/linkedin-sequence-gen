@@ -7,6 +7,7 @@ import { RefineSequenceDto } from './dto/refine-sequence.dto';
 import { PromptService } from '../prompt-service/prompt.service';
 import { DefaultSequenceFallback } from './fallbacks/default-sequence';
 import { SequenceRepository } from '../sequence-service/sequence.repository';
+import { TovConfigService } from '../sequence-service/tov-config.service';
 import { AiAdapterFactory } from './adapters/ai-adapter.factory';
 
 // Import helper services
@@ -25,6 +26,7 @@ export class AiService {
     private aiAdapterFactory: AiAdapterFactory,
     private promptService: PromptService,
     private sequenceRepository: SequenceRepository,
+    private tovConfigService: TovConfigService,
     private promptBuilder: PromptBuilderService,
     private responseProcessor: AiResponseProcessorService,
     private confidenceOptimizer: ConfidenceScoreOptimizerService,
@@ -235,10 +237,18 @@ export class AiService {
         extractedName,
       );
 
+      // Find or create new TOV configuration
+      const newTovConfig = await this.tovConfigService.findOrCreate(
+        refineDto.newTovConfig.formality,
+        refineDto.newTovConfig.warmth,
+        refineDto.newTovConfig.directness,
+      );
+
       // Create new sequence record as a refinement
       const newSequence = await this.sequenceRepository.create({
         prospectId: originalSequence.prospectId,
         promptId: originalSequence.promptId,
+        tovConfigId: newTovConfig.id,
         messages: refinedResult.sequence,
         thinkingProcess: refinedResult.thinkingProcess || {},
         prospectAnalysis: refinedResult.prospectAnalysis,
@@ -249,9 +259,9 @@ export class AiService {
             originalSequenceId: refineDto.originalSequenceId,
             tovChanges: {
               old: {
-                formality: originalSequence.tovFormality,
-                warmth: originalSequence.tovWarmth,
-                directness: originalSequence.tovDirectness,
+                formality: originalSequence.tovConfig.formality,
+                warmth: originalSequence.tovConfig.warmth,
+                directness: originalSequence.tovConfig.directness,
               },
               new: refineDto.newTovConfig,
             },
@@ -261,9 +271,6 @@ export class AiService {
             },
           },
         },
-        tovFormality: refineDto.newTovConfig.formality,
-        tovWarmth: refineDto.newTovConfig.warmth,
-        tovDirectness: refineDto.newTovConfig.directness,
         version: originalSequence.version + 1,
         parentSequenceId: refineDto.originalSequenceId,
         companyContext: originalSequence.companyContext,
@@ -279,24 +286,25 @@ export class AiService {
         changes: {
           tov: {
             formality: {
-              old: originalSequence.tovFormality,
+              old: originalSequence.tovConfig.formality,
               new: refineDto.newTovConfig.formality,
               change:
                 refineDto.newTovConfig.formality -
-                originalSequence.tovFormality,
+                originalSequence.tovConfig.formality,
             },
             warmth: {
-              old: originalSequence.tovWarmth,
+              old: originalSequence.tovConfig.warmth,
               new: refineDto.newTovConfig.warmth,
               change:
-                refineDto.newTovConfig.warmth - originalSequence.tovWarmth,
+                refineDto.newTovConfig.warmth -
+                originalSequence.tovConfig.warmth,
             },
             directness: {
-              old: originalSequence.tovDirectness,
+              old: originalSequence.tovConfig.directness,
               new: refineDto.newTovConfig.directness,
               change:
                 refineDto.newTovConfig.directness -
-                originalSequence.tovDirectness,
+                originalSequence.tovConfig.directness,
             },
           },
           sequenceLength: {
@@ -375,9 +383,9 @@ export class AiService {
           tovEvolution: sequences.map((seq) => ({
             version: seq.version,
             tov: {
-              formality: seq.tovFormality,
-              warmth: seq.tovWarmth,
-              directness: seq.tovDirectness,
+              formality: seq.tovConfig.formality,
+              warmth: seq.tovConfig.warmth,
+              directness: seq.tovConfig.directness,
             },
             createdAt: seq.createdAt,
           })),

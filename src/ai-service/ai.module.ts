@@ -3,6 +3,7 @@ import { AiService } from './ai.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { PromptModule } from '../prompt-service/prompt.module';
 import { SequenceRepository } from '../sequence-service/sequence.repository';
+import { TovConfigService } from '../sequence-service/tov-config.service';
 import { AiAdapterFactory } from './adapters/ai-adapter.factory';
 import { OpenAiAdapter } from './adapters/openai.adapter';
 import { AnthropicAdapter } from './adapters/anthropic.adapter';
@@ -25,6 +26,7 @@ import { LinkedInNameExtractorService } from './helpers/linkedin-name-extractor.
     GroqAdapter,
     PrismaService,
     SequenceRepository,
+    TovConfigService,
 
     // Register helper services
     PromptBuilderService,
