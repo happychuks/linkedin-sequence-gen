@@ -40,4 +40,4 @@ EXPOSE 3000
 # Railway handles startup via railway.json startCommand
 # No CMD needed here
 ENTRYPOINT ["./entrypoint.sh"]
-CMD ["node", "dist/main.js"]
+CMD ["npm", "run", "start:prod"]
