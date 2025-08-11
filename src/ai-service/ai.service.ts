@@ -3,9 +3,10 @@
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */
 import { Injectable, Logger } from '@nestjs/common';
 import { GenerateSequenceDto } from './dto/generate-sequence.dto';
+import { RefineSequenceDto } from './dto/refine-sequence.dto';
 import { PromptService } from '../prompt-service/prompt.service';
 import { DefaultSequenceFallback } from './fallbacks/default-sequence';
-import { PrismaService } from '../prisma/prisma.service';
+import { SequenceRepository } from '../sequence-service/sequence.repository';
 import { AiAdapterFactory } from './adapters/ai-adapter.factory';
 
 // Import helper services
@@ -23,7 +24,7 @@ export class AiService {
   constructor(
     private aiAdapterFactory: AiAdapterFactory,
     private promptService: PromptService,
-    private prisma: PrismaService,
+    private sequenceRepository: SequenceRepository,
     private promptBuilder: PromptBuilderService,
     private responseProcessor: AiResponseProcessorService,
     private confidenceOptimizer: ConfidenceScoreOptimizerService,
@@ -193,5 +194,224 @@ export class AiService {
   switchProvider(provider: 'openai' | 'anthropic' | 'groq') {
     this.aiAdapterFactory.switchProvider(provider);
     this.logger.log(`Switched to ${provider} provider`);
+  }
+
+  // Method to refine existing sequence with new TOV parameters
+  async refineSequence(refineDto: RefineSequenceDto): Promise<any> {
+    const startTime = Date.now();
+
+    try {
+      // Validate input
+      if (!refineDto.originalSequenceId || refineDto.originalSequenceId <= 0) {
+        throw new Error('Original sequence ID must be a positive integer');
+      }
+
+      // Get the original sequence
+      const originalSequence =
+        await this.sequenceRepository.findByIdWithProspect(
+          refineDto.originalSequenceId,
+        );
+
+      if (!originalSequence) {
+        throw new Error(
+          `Sequence with ID ${refineDto.originalSequenceId} not found`,
+        );
+      }
+
+      // Build new prompt with refined TOV
+      const newSequenceLength =
+        refineDto.newSequenceLength || originalSequence.sequenceLength;
+      const { prompt, extractedName } = this.promptBuilder.buildPrompt(
+        originalSequence.prospect.url,
+        refineDto.newTovConfig,
+        originalSequence.companyContext,
+        newSequenceLength,
+      );
+
+      // Generate refined sequence
+      const refinedResult = await this.generateWithRetries(
+        prompt,
+        newSequenceLength,
+        extractedName,
+      );
+
+      // Create new sequence record as a refinement
+      const newSequence = await this.sequenceRepository.create({
+        prospectId: originalSequence.prospectId,
+        promptId: originalSequence.promptId,
+        messages: refinedResult.sequence,
+        thinkingProcess: refinedResult.thinkingProcess || {},
+        prospectAnalysis: refinedResult.prospectAnalysis,
+        metadata: {
+          ...refinedResult.metadata,
+          refinement_time_ms: Date.now() - startTime,
+          refinementInfo: {
+            originalSequenceId: refineDto.originalSequenceId,
+            tovChanges: {
+              old: {
+                formality: originalSequence.tovFormality,
+                warmth: originalSequence.tovWarmth,
+                directness: originalSequence.tovDirectness,
+              },
+              new: refineDto.newTovConfig,
+            },
+            lengthChange: {
+              old: originalSequence.sequenceLength,
+              new: newSequenceLength,
+            },
+          },
+        },
+        tovFormality: refineDto.newTovConfig.formality,
+        tovWarmth: refineDto.newTovConfig.warmth,
+        tovDirectness: refineDto.newTovConfig.directness,
+        version: originalSequence.version + 1,
+        parentSequenceId: refineDto.originalSequenceId,
+        companyContext: originalSequence.companyContext,
+        sequenceLength: newSequenceLength,
+      });
+
+      const endTime = Date.now();
+      const totalRefinementTime = endTime - startTime;
+
+      return {
+        refinedSequence: newSequence,
+        originalSequence,
+        changes: {
+          tov: {
+            formality: {
+              old: originalSequence.tovFormality,
+              new: refineDto.newTovConfig.formality,
+              change:
+                refineDto.newTovConfig.formality -
+                originalSequence.tovFormality,
+            },
+            warmth: {
+              old: originalSequence.tovWarmth,
+              new: refineDto.newTovConfig.warmth,
+              change:
+                refineDto.newTovConfig.warmth - originalSequence.tovWarmth,
+            },
+            directness: {
+              old: originalSequence.tovDirectness,
+              new: refineDto.newTovConfig.directness,
+              change:
+                refineDto.newTovConfig.directness -
+                originalSequence.tovDirectness,
+            },
+          },
+          sequenceLength: {
+            old: originalSequence.sequenceLength,
+            new: newSequenceLength,
+            changed: originalSequence.sequenceLength !== newSequenceLength,
+          },
+        },
+        metadata: {
+          refinement_time_ms: totalRefinementTime,
+        },
+      };
+    } catch (error) {
+      this.logger.error(
+        `Failed to refine sequence ${refineDto.originalSequenceId}:`,
+        error,
+      );
+      throw new Error(
+        `Failed to refine sequence: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      );
+    }
+  }
+
+  // Method to get refinement history for a sequence
+  async getSequenceRefinements(sequenceId: number): Promise<any[]> {
+    try {
+      // Validate input
+      if (!Number.isInteger(sequenceId) || sequenceId <= 0) {
+        throw new Error('Sequence ID must be a positive integer');
+      }
+
+      const refinements =
+        await this.sequenceRepository.findRefinementsByParentId(sequenceId);
+
+      return refinements;
+    } catch (error) {
+      this.logger.error('Error getting sequence refinements:', {
+        sequenceId,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
+      throw error;
+    }
+  }
+
+  // Method to compare different versions of a sequence
+  async compareSequenceVersions(sequenceIds: number[]): Promise<any> {
+    try {
+      // Validate input
+      if (!sequenceIds || sequenceIds.length === 0) {
+        throw new Error('No sequence IDs provided for comparison');
+      }
+
+      if (sequenceIds.some((id) => !Number.isInteger(id) || id <= 0)) {
+        throw new Error('All sequence IDs must be positive integers');
+      }
+
+      const sequences =
+        await this.sequenceRepository.findManyByIds(sequenceIds);
+
+      // Check if all requested sequences were found
+      if (sequences.length === 0) {
+        throw new Error('No sequences found with the provided IDs');
+      }
+
+      if (sequences.length !== sequenceIds.length) {
+        const foundIds = sequences.map((seq) => seq.id);
+        const missingIds = sequenceIds.filter((id) => !foundIds.includes(id));
+        throw new Error(
+          `Sequences not found with IDs: ${missingIds.join(', ')}`,
+        );
+      }
+
+      return {
+        sequences,
+        comparison: {
+          tovEvolution: sequences.map((seq) => ({
+            version: seq.version,
+            tov: {
+              formality: seq.tovFormality,
+              warmth: seq.tovWarmth,
+              directness: seq.tovDirectness,
+            },
+            createdAt: seq.createdAt,
+          })),
+          messageQualityTrends: sequences.map((seq) => {
+            const messages = Array.isArray(seq.messages) ? seq.messages : [];
+
+            // Calculate actual average confidence from messages
+            let totalConfidence = 0;
+            let messageCount = 0;
+
+            messages.forEach((message: any) => {
+              if (message && typeof message.confidence === 'number') {
+                totalConfidence += message.confidence;
+                messageCount++;
+              }
+            });
+
+            const averageConfidence =
+              messageCount > 0 ? totalConfidence / messageCount : 0;
+
+            return {
+              version: seq.version,
+              averageConfidence: Math.round(averageConfidence * 100) / 100, // Round to 2 decimal places
+              messageCount: messages.length,
+            };
+          }),
+        },
+      };
+    } catch (error) {
+      this.logger.error('Error comparing sequence versions:', {
+        sequenceIds,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
+      throw error; // Re-throw to be handled by the controller/global filter
+    }
   }
 }
