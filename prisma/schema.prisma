@@ -32,14 +32,29 @@ model Sequence {
   id               Int      @id @default(autoincrement())
   prospectId       Int
   promptId         Int
-  messages         Json
-  thinkingProcess  Json
+  messages         Json     @db.JsonB // JSONB for message querying
+  thinkingProcess  Json // Keep as JSON (write-once, read-rarely)
   prospectAnalysis String?
-  metadata         Json
+  metadata         Json     @db.JsonB // JSONB for analytics queries
   createdAt        DateTime @default(now())
 
-  prospect Prospect @relation(fields: [prospectId], references: [id])
-  prompt   Prompt   @relation(fields: [promptId], references: [id])
+  // TOV Configuration for refinement capability
+  tovFormality  Float @default(0.5) // 0.0 to 1.0
+  tovWarmth     Float @default(0.5) // 0.0 to 1.0
+  tovDirectness Float @default(0.5) // 0.0 to 1.0
+
+  // Sequence versioning for iterations
+  version          Int  @default(1)
+  parentSequenceId Int? // Reference to original sequence if this is a refinement
+
+  // Company context used for generation
+  companyContext String @default("")
+  sequenceLength Int    @default(3)
+
+  prospect       Prospect   @relation(fields: [prospectId], references: [id])
+  prompt         Prompt     @relation(fields: [promptId], references: [id])
+  parentSequence Sequence?  @relation("SequenceRefinements", fields: [parentSequenceId], references: [id])
+  refinements    Sequence[] @relation("SequenceRefinements")
 
   // Indexes for performance optimization
   @@index([prospectId])
@@ -47,4 +62,9 @@ model Sequence {
   @@index([createdAt])
   @@index([prospectId, createdAt(sort: Desc)])
   @@index([promptId, createdAt(sort: Desc)])
+  @@index([prospectId, version])
+  @@index([parentSequenceId])
+  // JSONB indexes for efficient querying
+  @@index([metadata], type: Gin)
+  @@index([messages], type: Gin)
 }
