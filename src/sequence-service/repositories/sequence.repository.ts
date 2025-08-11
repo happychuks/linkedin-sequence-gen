@@ -1,21 +1,21 @@
 import { Injectable } from '@nestjs/common';
-import { PrismaService } from '../prisma/prisma.service';
+import { PrismaService } from '../../prisma/prisma.service';
 import { Sequence } from '@prisma/client';
 
 export interface CreateSequenceData {
   prospectId: number;
   promptId: number;
-  messages: any;
+  messages: any[];
   thinkingProcess: any;
-  prospectAnalysis?: string;
+  prospectAnalysis: string | null;
   metadata: any;
-  tovFormality?: number;
-  tovWarmth?: number;
-  tovDirectness?: number;
-  companyContext?: string;
-  sequenceLength?: number;
-  version?: number;
-  parentSequenceId?: number;
+  tovFormality: number;
+  tovWarmth: number;
+  tovDirectness: number;
+  version: number;
+  parentSequenceId: number | null;
+  companyContext: string;
+  sequenceLength: number;
 }
 
 export interface SequenceWithProspect extends Sequence {
@@ -26,26 +26,11 @@ export interface SequenceWithProspect extends Sequence {
 
 @Injectable()
 export class SequenceRepository {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private prisma: PrismaService) {}
 
-  async create(data: CreateSequenceData) {
-    return this.prisma.sequence.create({
-      data,
-    });
-  }
-
-  async findManyByProspectId(prospectId: number) {
-    return this.prisma.sequence.findMany({
-      where: { prospectId },
-      include: { prompt: true },
-      orderBy: { createdAt: 'desc' },
-    });
-  }
-
-  async findById(id: number) {
+  async findById(id: number): Promise<Sequence | null> {
     return this.prisma.sequence.findUnique({
       where: { id },
-      include: { prompt: true, prospect: true },
     });
   }
 
@@ -91,16 +76,32 @@ export class SequenceRepository {
     });
   }
 
-  async deleteById(id: number) {
-    return this.prisma.sequence.delete({
-      where: { id },
+  async findByProspectId(prospectId: number): Promise<Sequence[]> {
+    return this.prisma.sequence.findMany({
+      where: { prospectId },
+      orderBy: { createdAt: 'desc' },
     });
   }
 
-  async updateById(id: number, data: Partial<CreateSequenceData>) {
+  async create(data: CreateSequenceData): Promise<Sequence> {
+    return this.prisma.sequence.create({
+      data,
+    });
+  }
+
+  async update(
+    id: number,
+    data: Partial<CreateSequenceData>,
+  ): Promise<Sequence> {
     return this.prisma.sequence.update({
       where: { id },
       data,
+    });
+  }
+
+  async delete(id: number): Promise<Sequence> {
+    return this.prisma.sequence.delete({
+      where: { id },
     });
   }
 
@@ -132,14 +133,10 @@ export class SequenceRepository {
       select: { version: true },
     });
 
-    const latestVersion = latestRefinement
-      ? latestRefinement.version
-      : sequence.version;
-
     return {
       totalRefinements: refinementsCount,
 
-      latestVersion: latestVersion,
+      latestVersion: latestRefinement?.version ?? sequence.version,
       createdAt: sequence.createdAt,
     };
   }
